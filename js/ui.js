@@ -6,11 +6,14 @@ const UI = {
     width: 800,
     height: 600,
 
+    isTouch: false,
+
     init(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.width = canvas.width;
         this.height = canvas.height;
+        this.isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     },
 
     clear() {
@@ -53,11 +56,13 @@ const UI = {
         // Instructions
         this.ctx.font = '18px monospace';
         this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillText('Press ENTER to Start', this.width / 2, 460);
+        this.ctx.fillText(this.isTouch ? 'Tap START below' : 'Press ENTER to Start', this.width / 2, 460);
 
-        this.ctx.font = '14px monospace';
-        this.ctx.fillStyle = '#888888';
-        this.ctx.fillText('Press C to add custom words', this.width / 2, 500);
+        if (!this.isTouch) {
+            this.ctx.font = '14px monospace';
+            this.ctx.fillStyle = '#888888';
+            this.ctx.fillText('Press C to add custom words', this.width / 2, 500);
+        }
 
         // Custom words count
         if (WordManager.customWords.length > 0) {
@@ -135,7 +140,11 @@ const UI = {
         // Instructions
         this.ctx.font = '16px monospace';
         this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillText('← → Move   SPACE Toggle   D Difficulty   ENTER Start', this.width / 2, 420);
+        if (this.isTouch) {
+            this.ctx.fillText('Tap names below to toggle players', this.width / 2, 420);
+        } else {
+            this.ctx.fillText('← → Move   SPACE Toggle   D Difficulty   ENTER Start', this.width / 2, 420);
+        }
 
         const selectedCount = selectedPlayers.length;
         if (selectedCount < 1) {
@@ -186,7 +195,7 @@ const UI = {
             this._drawSpeakerIcon(this.width / 2, 340);
             this.ctx.font = '14px monospace';
             this.ctx.fillStyle = '#888888';
-            this.ctx.fillText('Press R to hear the word again', this.width / 2, 380);
+            this.ctx.fillText(this.isTouch ? 'Tap "Hear Word" below' : 'Press R to hear the word again', this.width / 2, 380);
         }
 
         // Recording state
@@ -210,7 +219,7 @@ const UI = {
         } else if (wordAnnounced) {
             this.ctx.font = 'bold 18px monospace';
             this.ctx.fillStyle = '#e94560';
-            this.ctx.fillText('Hold SPACE to spell', this.width / 2, 440);
+            this.ctx.fillText(this.isTouch ? 'Hold the green button to spell' : 'Hold SPACE to spell', this.width / 2, 440);
         }
 
         // Bottom info bar
@@ -321,11 +330,13 @@ const UI = {
 
         this.ctx.font = '18px monospace';
         this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillText('Press ENTER to play again', this.width / 2, 520);
+        this.ctx.fillText(this.isTouch ? 'Use buttons below' : 'Press ENTER to play again', this.width / 2, 520);
 
-        this.ctx.font = '14px monospace';
-        this.ctx.fillStyle = '#888888';
-        this.ctx.fillText('Press ESC for title screen', this.width / 2, 550);
+        if (!this.isTouch) {
+            this.ctx.font = '14px monospace';
+            this.ctx.fillStyle = '#888888';
+            this.ctx.fillText('Press ESC for title screen', this.width / 2, 550);
+        }
     },
 
     // ---- HELPERS ----

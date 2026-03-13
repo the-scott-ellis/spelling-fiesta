@@ -39,6 +39,8 @@ const Game = {
     // Input tracking
     keys: {},
     spaceHeld: false,
+    isTouchDevice: false,
+    touchControls: null,
 
     init() {
         const canvas = document.getElementById('game');
@@ -47,17 +49,182 @@ const Game = {
         WordManager.init();
         SpeechManager.init();
 
+        // Detect touch device
+        this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        this.touchControls = document.getElementById('touch-controls');
+
         // Keyboard handlers
         document.addEventListener('keydown', (e) => this.onKeyDown(e));
         document.addEventListener('keyup', (e) => this.onKeyUp(e));
+
+        // Canvas tap handler (for touch devices as fallback)
+        canvas.addEventListener('click', (e) => {
+            SoundManager.resume();
+        });
 
         // Speech result callback
         SpeechManager.onResult = (text, isFinal) => {
             this.transcript = text;
         };
 
+        // Set up initial touch controls
+        this.updateTouchControls();
+
         // Start game loop
         this.loop();
+    },
+
+    // ---- TOUCH CONTROLS ----
+    updateTouchControls() {
+        if (!this.touchControls) return;
+        this.touchControls.innerHTML = '';
+
+        const makeBtn = (label, cssClass) => {
+            const btn = document.createElement('button');
+            btn.className = 'touch-btn' + (cssClass ? ' ' + cssClass : '');
+            btn.textContent = label;
+            return btn;
+        };
+
+        switch (this.state) {
+            case this.STATE.TITLE: {
+                const startBtn = makeBtn('▶ START');
+                startBtn.addEventListener('click', () => {
+                    SoundManager.resume();
+                    SoundManager.playClick();
+                    this.state = this.STATE.PLAYER_SELECT;
+                    this.updateTouchControls();
+                });
+                this.touchControls.appendChild(startBtn);
+
+                const customBtn = makeBtn('+ Custom Words');
+                customBtn.addEventListener('click', () => {
+                    SoundManager.resume();
+                    const input = prompt('Enter custom words (comma-separated):');
+                    if (input) {
+                        const count = WordManager.addCustomWords(input);
+                        if (count > 0) SoundManager.playCorrect();
+                    }
+                });
+                this.touchControls.appendChild(customBtn);
+                break;
+            }
+
+            case this.STATE.PLAYER_SELECT: {
+                // Character toggle buttons
+                CHARACTERS.forEach((char, i) => {
+                    const btn = makeBtn(char.name);
+                    if (this.selectedPlayers.includes(i)) {
+                        btn.style.background = '#27ae60';
+                        btn.style.borderColor = '#27ae60';
+                    }
+                    btn.addEventListener('click', () => {
+                        SoundManager.resume();
+                        SoundManager.playClick();
+                        const idx = this.selectedPlayers.indexOf(i);
+                        if (idx >= 0) {
+                            this.selectedPlayers.splice(idx, 1);
+                        } else {
+                            this.selectedPlayers.push(i);
+                            this.selectedPlayers.sort();
+                        }
+                        this.updateTouchControls();
+                    });
+                    this.touchControls.appendChild(btn);
+                });
+
+                // Difficulty button
+                const diffBtn = makeBtn('Difficulty: ' + this.difficulty.toUpperCase());
+                diffBtn.addEventListener('click', () => {
+                    SoundManager.resume();
+                    SoundManager.playClick();
+                    const diffs = ['easy', 'medium', 'hard'];
+                    const current = diffs.indexOf(this.difficulty);
+                    this.difficulty = diffs[(current + 1) % diffs.length];
+                    this.updateTouchControls();
+                });
+                this.touchControls.appendChild(diffBtn);
+
+                // Go button
+                const goBtn = makeBtn('▶ GO!');
+                goBtn.style.background = '#e94560';
+                goBtn.addEventListener('click', () => {
+                    SoundManager.resume();
+                    if (this.selectedPlayers.length >= 1) {
+                        SoundManager.playClick();
+                        this.startGame();
+                        this.updateTouchControls();
+                    }
+                });
+                this.touchControls.appendChild(goBtn);
+                break;
+            }
+
+            case this.STATE.PLAYING: {
+                // Hear word again button
+                const hearBtn = makeBtn('🔊 Hear Word');
+                hearBtn.addEventListener('click', () => {
+                    SoundManager.resume();
+                    if (this.currentWord) {
+                        SoundManager.playAnnounce();
+                        SpeechManager.sayWord(this.currentWord);
+                    }
+                });
+                this.touchControls.appendChild(hearBtn);
+
+                // Hold to spell button
+                const spellBtn = makeBtn('🎤 HOLD TO SPELL', 'spell-btn');
+                spellBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    SoundManager.resume();
+                    spellBtn.classList.add('active');
+                    this.startRecording();
+                });
+                spellBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    spellBtn.classList.remove('active');
+                    this.stopRecording();
+                });
+                // Mouse fallback for testing on desktop
+                spellBtn.addEventListener('mousedown', (e) => {
+                    SoundManager.resume();
+                    spellBtn.classList.add('active');
+                    this.startRecording();
+                });
+                spellBtn.addEventListener('mouseup', (e) => {
+                    spellBtn.classList.remove('active');
+                    this.stopRecording();
+                });
+                this.touchControls.appendChild(spellBtn);
+                break;
+            }
+
+            case this.STATE.RESULT: {
+                // No buttons during result (auto-advances)
+                break;
+            }
+
+            case this.STATE.GAME_OVER: {
+                const againBtn = makeBtn('▶ Play Again');
+                againBtn.addEventListener('click', () => {
+                    SoundManager.resume();
+                    SoundManager.playClick();
+                    this.startGame();
+                    this.updateTouchControls();
+                });
+                this.touchControls.appendChild(againBtn);
+
+                const titleBtn = makeBtn('🏠 Title');
+                titleBtn.addEventListener('click', () => {
+                    SoundManager.resume();
+                    SoundManager.playClick();
+                    this.state = this.STATE.TITLE;
+                    this.updateTouchControls();
+                });
+                this.touchControls.appendChild(titleBtn);
+                break;
+            }
+        }
     },
 
     loop() {
@@ -163,6 +330,7 @@ const Game = {
         if (e.code === 'Enter') {
             SoundManager.playClick();
             this.state = this.STATE.PLAYER_SELECT;
+            this.updateTouchControls();
         } else if (e.code === 'KeyC') {
             // Custom words
             const input = prompt('Enter custom words (comma-separated):');
@@ -203,6 +371,7 @@ const Game = {
             if (this.selectedPlayers.length >= 1) {
                 SoundManager.playClick();
                 this.startGame();
+                this.updateTouchControls();
             }
         }
     },
@@ -224,9 +393,11 @@ const Game = {
         if (e.code === 'Enter') {
             SoundManager.playClick();
             this.startGame();
+            this.updateTouchControls();
         } else if (e.code === 'Escape') {
             SoundManager.playClick();
             this.state = this.STATE.TITLE;
+            this.updateTouchControls();
         }
     },
 
@@ -294,6 +465,7 @@ const Game = {
                 this.resultTimer = 0;
                 SoundManager.playFanfare();
                 this.spawnParticles(400, 100, 60);
+                this.updateTouchControls();
                 return;
             }
         } else {
@@ -302,6 +474,7 @@ const Game = {
 
         this.state = this.STATE.RESULT;
         this.resultTimer = 180; // ~3 seconds at 60fps
+        this.updateTouchControls();
     },
 
     nextTurn() {
@@ -311,6 +484,7 @@ const Game = {
         }
         this.state = this.STATE.PLAYING;
         this.newWord();
+        this.updateTouchControls();
     },
 
     spawnParticles(cx, cy, count) {
