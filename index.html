@@ -22,9 +22,8 @@
             border: 4px solid #e94560;
             border-radius: 4px;
             image-rendering: pixelated;
+            image-rendering: crisp-edges;
             cursor: default;
-            max-width: 100vw;
-            max-height: 70vh;
         }
         /* Touch controls - hidden on desktop, shown on touch devices */
         #touch-controls {
@@ -41,9 +40,9 @@
             color: #ffffff;
             border: 2px solid #e94560;
             border-radius: 8px;
-            padding: 12px 20px;
+            padding: 14px 24px;
             font-family: monospace;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
             touch-action: manipulation;
@@ -56,15 +55,27 @@
         .touch-btn.spell-btn {
             background: #27ae60;
             border-color: #27ae60;
-            padding: 20px 40px;
-            font-size: 20px;
+            padding: 24px 50px;
+            font-size: 22px;
+            width: 80%;
         }
         .touch-btn.spell-btn:active, .touch-btn.spell-btn.active {
             background: #1e8449;
         }
+        /* Desktop: constrain canvas size */
+        @media (hover: hover) and (pointer: fine) {
+            canvas { max-width: 800px; max-height: 600px; }
+        }
+        /* Mobile/touch: canvas fills width, touch controls visible */
         @media (hover: none) and (pointer: coarse) {
+            body { justify-content: flex-start; padding-top: 4px; }
             #touch-controls { display: flex; }
-            canvas { max-height: 60vh; }
+            canvas {
+                width: 100vw !important;
+                height: auto !important;
+                border-width: 2px;
+                border-radius: 0;
+            }
         }
     </style>
 </head>

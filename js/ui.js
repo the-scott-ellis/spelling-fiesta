@@ -43,14 +43,16 @@ const UI = {
         this.ctx.fillText('A Family Spelling Adventure', this.width / 2, 290);
 
         // Character preview
-        const startX = this.width / 2 - (4 * 70) / 2;
+        const previewScale = 3.5;
+        const previewSpacing = 100;
+        const startX = this.width / 2 - (4 * previewSpacing) / 2;
         CHARACTERS.forEach((char, i) => {
-            const cx = startX + i * 70 + 10;
-            SpriteRenderer.drawCharacter(this.ctx, char, cx, 330, 2.5, 0, false);
-            this.ctx.font = '12px monospace';
+            const cx = startX + i * previewSpacing + 20;
+            SpriteRenderer.drawCharacter(this.ctx, char, cx, 310, previewScale, 0, false);
+            this.ctx.font = 'bold 14px monospace';
             this.ctx.textAlign = 'center';
             this.ctx.fillStyle = '#ffffff';
-            this.ctx.fillText(char.name, cx + 20, 400);
+            this.ctx.fillText(char.name, cx + 8 * previewScale, 395);
         });
 
         // Instructions
@@ -81,19 +83,22 @@ const UI = {
         this.ctx.fillText('CHOOSE PLAYERS', this.width / 2, 60);
 
         // Draw each character as selectable
-        const startX = this.width / 2 - (4 * 160) / 2;
+        const selScale = 4;
+        const selSpacing = 170;
+        const selStartX = this.width / 2 - (4 * selSpacing) / 2;
         CHARACTERS.forEach((char, i) => {
-            const cx = startX + i * 160 + 40;
+            const cx = selStartX + i * selSpacing + 30;
+            const charCenterX = cx + 8 * selScale;
             const isSelected = selectedPlayers.includes(i);
             const isCursor = cursorIndex === i;
 
             // Selection box
             if (isSelected) {
                 this.ctx.fillStyle = 'rgba(39, 174, 96, 0.3)';
-                this.ctx.fillRect(cx - 15, 80, 80, 190);
+                this.ctx.fillRect(cx - 10, 75, 16 * selScale + 20, 220);
                 this.ctx.strokeStyle = '#27ae60';
                 this.ctx.lineWidth = 2;
-                this.ctx.strokeRect(cx - 15, 80, 80, 190);
+                this.ctx.strokeRect(cx - 10, 75, 16 * selScale + 20, 220);
             }
 
             // Cursor indicator
@@ -101,22 +106,22 @@ const UI = {
                 this.ctx.fillStyle = '#ffd700';
                 this.ctx.font = '20px monospace';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('▼', cx + 25, 95);
+                this.ctx.fillText('▼', charCenterX, 90);
             }
 
             // Character
-            SpriteRenderer.drawCharacter(this.ctx, char, cx, 100, 3, 0, isCursor);
+            SpriteRenderer.drawCharacter(this.ctx, char, cx, 100, selScale, 0, isCursor);
 
             // Name
-            this.ctx.font = 'bold 16px monospace';
+            this.ctx.font = 'bold 18px monospace';
             this.ctx.textAlign = 'center';
             this.ctx.fillStyle = isSelected ? '#27ae60' : '#ffffff';
-            this.ctx.fillText(char.name, cx + 25, 200);
+            this.ctx.fillText(char.name, charCenterX, 210);
 
             // Selection status
             this.ctx.font = '14px monospace';
             this.ctx.fillStyle = isSelected ? '#27ae60' : '#666666';
-            this.ctx.fillText(isSelected ? '✓ Playing' : 'Press SPACE', cx + 25, 220);
+            this.ctx.fillText(isSelected ? '✓ Playing' : (this.isTouch ? 'Tap below' : 'SPACE'), charCenterX, 230);
         });
 
         // Difficulty selector
@@ -167,35 +172,56 @@ const UI = {
         const activePlayer = players[activePlayerIndex];
         const activeChar = CHARACTERS[activePlayer.charIndex];
 
-        // Draw all player sprites
-        const spriteStartX = this.width / 2 - (players.length * 120) / 2;
-        players.forEach((player, i) => {
-            const char = CHARACTERS[player.charIndex];
-            const sx = spriteStartX + i * 120 + 20;
-            const isActive = i === activePlayerIndex;
-            const scale = isActive ? 3.5 : 2.5;
-            const sy = isActive ? 150 : 170;
-            SpriteRenderer.drawCharacter(this.ctx, char, sx, sy, scale, 0, isActive);
+        // Active player - big and center stage
+        const activeScale = 6;
+        const activeW = 16 * activeScale;
+        const activeX = this.width / 2 - activeW / 2;
+        SpriteRenderer.drawCharacter(this.ctx, activeChar, activeX, 90, activeScale, 0, true);
 
-            // Name below sprite
-            this.ctx.font = isActive ? 'bold 16px monospace' : '13px monospace';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillStyle = isActive ? '#ffd700' : '#aaaaaa';
-            this.ctx.fillText(char.name, sx + (isActive ? 28 : 20), sy + (isActive ? 85 : 75));
-        });
-
-        // Turn indicator
-        this.ctx.font = 'bold 22px monospace';
+        // Active player name
+        this.ctx.font = 'bold 24px monospace';
         this.ctx.textAlign = 'center';
         this.ctx.fillStyle = '#ffd700';
-        this.ctx.fillText(`${activeChar.name}'s Turn`, this.width / 2, 300);
+        this.ctx.fillText(`${activeChar.name}'s Turn`, this.width / 2, 235);
+
+        // Small inactive player sprites along the sides
+        const inactivePlayers = players.map((p, i) => ({ ...p, idx: i })).filter((_, i) => i !== activePlayerIndex);
+        if (inactivePlayers.length > 0) {
+            const smallScale = 2;
+            // Left side
+            const leftPlayers = inactivePlayers.slice(0, Math.ceil(inactivePlayers.length / 2));
+            const rightPlayers = inactivePlayers.slice(Math.ceil(inactivePlayers.length / 2));
+
+            leftPlayers.forEach((p, i) => {
+                const char = CHARACTERS[p.charIndex];
+                const sx = 15;
+                const sy = 90 + i * 60;
+                SpriteRenderer.drawCharacter(this.ctx, char, sx, sy, smallScale, 0, false);
+                this.ctx.font = '10px monospace';
+                this.ctx.textAlign = 'left';
+                this.ctx.fillStyle = '#888888';
+                this.ctx.fillText(char.name, sx + 35, sy + 20);
+            });
+
+            rightPlayers.forEach((p, i) => {
+                const char = CHARACTERS[p.charIndex];
+                const sx = this.width - 50;
+                const sy = 90 + i * 60;
+                SpriteRenderer.drawCharacter(this.ctx, char, sx, sy, smallScale, 0, false);
+                this.ctx.font = '10px monospace';
+                this.ctx.textAlign = 'right';
+                this.ctx.fillStyle = '#888888';
+                this.ctx.fillText(char.name, sx - 5, sy + 20);
+            });
+        }
 
         // Speaker icon (word is heard, not shown)
         if (wordAnnounced) {
-            this._drawSpeakerIcon(this.width / 2, 340);
+            this._drawSpeakerIcon(this.width / 2, 280);
             this.ctx.font = '14px monospace';
+            this.ctx.textAlign = 'center';
             this.ctx.fillStyle = '#888888';
-            this.ctx.fillText(this.isTouch ? 'Tap "Hear Word" below' : 'Press R to hear the word again', this.width / 2, 380);
+            this.ctx.fillText(this.isTouch ? 'Tap "Hear Word" below' : 'Press R to hear the word again', this.width / 2, 310);
         }
 
         // Recording state
@@ -203,27 +229,30 @@ const UI = {
             // Pulsing red mic indicator
             const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
             this.ctx.beginPath();
-            this.ctx.arc(this.width / 2, 420, 12, 0, Math.PI * 2);
+            this.ctx.arc(this.width / 2, 350, 14, 0, Math.PI * 2);
             this.ctx.fillStyle = `rgba(231, 76, 60, ${pulse})`;
             this.ctx.fill();
-            this.ctx.font = 'bold 16px monospace';
+            this.ctx.font = 'bold 20px monospace';
+            this.ctx.textAlign = 'center';
             this.ctx.fillStyle = '#e74c3c';
-            this.ctx.fillText('LISTENING...', this.width / 2, 455);
+            this.ctx.fillText('LISTENING...', this.width / 2, 385);
 
             // Show transcription
             if (transcript) {
-                this.ctx.font = '24px monospace';
+                this.ctx.font = 'bold 28px monospace';
                 this.ctx.fillStyle = '#ffffff';
-                this.ctx.fillText(transcript.toUpperCase(), this.width / 2, 495);
+                this.ctx.fillText(transcript.toUpperCase(), this.width / 2, 430);
             }
         } else if (wordAnnounced) {
-            this.ctx.font = 'bold 18px monospace';
+            this.ctx.font = 'bold 20px monospace';
+            this.ctx.textAlign = 'center';
             this.ctx.fillStyle = '#e94560';
-            this.ctx.fillText(this.isTouch ? 'Hold the green button to spell' : 'Hold SPACE to spell', this.width / 2, 440);
+            this.ctx.fillText(this.isTouch ? 'Hold the green button to spell' : 'Hold SPACE to spell', this.width / 2, 370);
         }
 
         // Bottom info bar
         this.ctx.font = '12px monospace';
+        this.ctx.textAlign = 'center';
         this.ctx.fillStyle = '#666666';
         this.ctx.fillText(`Round ${gameState.round}  |  First to ${targetScore} wins`, this.width / 2, 580);
     },
@@ -308,11 +337,12 @@ const UI = {
 
         // Winner sprite (large)
         const winnerChar = CHARACTERS[winner.charIndex];
-        SpriteRenderer.drawCharacter(this.ctx, winnerChar, this.width / 2 - 35, 100, 5, 0, true);
+        const winScale = 7;
+        SpriteRenderer.drawCharacter(this.ctx, winnerChar, this.width / 2 - 8 * winScale, 90, winScale, 0, true);
 
-        this.ctx.font = 'bold 28px monospace';
+        this.ctx.font = 'bold 32px monospace';
         this.ctx.fillStyle = '#ffd700';
-        this.ctx.fillText(winnerChar.name, this.width / 2, 240);
+        this.ctx.fillText(winnerChar.name, this.width / 2, 260);
 
         // All scores
         this.ctx.font = '20px monospace';
