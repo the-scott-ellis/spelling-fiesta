@@ -107,6 +107,18 @@ const Game = {
                     }
                 });
                 this.touchControls.appendChild(customBtn);
+
+                const voiceBtn = makeBtn('🎙 AI Voice');
+                voiceBtn.addEventListener('click', () => {
+                    SoundManager.resume();
+                    const current = SpeechManager.getApiKey();
+                    const key = prompt('Enter OpenAI API key for AI voice (leave blank to clear):', current);
+                    if (key !== null) {
+                        SpeechManager.setApiKey(key.trim());
+                        if (key.trim()) SoundManager.playCorrect();
+                    }
+                });
+                this.touchControls.appendChild(voiceBtn);
                 break;
             }
 
@@ -167,7 +179,7 @@ const Game = {
                     SoundManager.resume();
                     if (this.currentWord) {
                         SoundManager.playAnnounce();
-                        SpeechManager.sayWord(this.currentWord);
+                        SpeechManager.sayWordWithAI(this.currentWord);
                     }
                 });
                 this.touchControls.appendChild(hearBtn);
@@ -340,6 +352,14 @@ const Game = {
                     SoundManager.playCorrect();
                 }
             }
+        } else if (e.code === 'KeyV') {
+            // Voice API key
+            const current = SpeechManager.getApiKey();
+            const key = prompt('Enter OpenAI API key for AI voice (leave blank to clear):', current);
+            if (key !== null) {
+                SpeechManager.setApiKey(key.trim());
+                if (key.trim()) SoundManager.playCorrect();
+            }
         }
     },
 
@@ -384,7 +404,7 @@ const Game = {
             // Repeat word
             if (this.currentWord) {
                 SoundManager.playAnnounce();
-                SpeechManager.sayWord(this.currentWord);
+                SpeechManager.sayWordWithAI(this.currentWord);
             }
         }
     },
@@ -424,7 +444,7 @@ const Game = {
         // Announce the word after a brief delay
         setTimeout(() => {
             SoundManager.playAnnounce();
-            SpeechManager.sayWord(this.currentWord);
+            SpeechManager.sayWordWithAI(this.currentWord);
             this.wordAnnounced = true;
         }, 500);
     },

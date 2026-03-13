@@ -7,6 +7,44 @@ const SpeechManager = {
     interimTranscript: '',
     onResult: null, // callback(transcript, isFinal)
     supported: false,
+    bestVoice: null,
+
+    // Preferred voice names in order of quality (Neural > Google > Microsoft > macOS native)
+    VOICE_PREFERENCES: [
+        'Google US English',
+        'Google UK English Female',
+        'Microsoft Jenny Online (Natural) - English (United States)',
+        'Microsoft Aria Online (Natural) - English (United States)',
+        'Samantha',
+        'Alex',
+    ],
+
+    selectBestVoice() {
+        const voices = window.speechSynthesis.getVoices();
+        // Try preferred list first
+        for (const preferred of this.VOICE_PREFERENCES) {
+            const match = voices.find(v => v.name === preferred);
+            if (match) { this.bestVoice = match; return; }
+        }
+        // Fall back to any en-US voice
+        const enUs = voices.find(v => v.lang === 'en-US');
+        if (enUs) { this.bestVoice = enUs; return; }
+        // Fall back to any English voice
+        const anyEn = voices.find(v => v.lang.startsWith('en'));
+        if (anyEn) { this.bestVoice = anyEn; }
+    },
+
+    setApiKey(key) {
+        if (key) {
+            localStorage.setItem('spellingFiesta_openAiKey', key);
+        } else {
+            localStorage.removeItem('spellingFiesta_openAiKey');
+        }
+    },
+
+    getApiKey() {
+        return localStorage.getItem('spellingFiesta_openAiKey') || '';
+    },
 
     init() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -16,6 +54,13 @@ const SpeechManager = {
             return;
         }
         this.supported = true;
+
+        // Load voices — they may not be ready immediately
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = () => this.selectBestVoice();
+        }
+        this.selectBestVoice();
+
         this.recognition = new SpeechRecognition();
         this.recognition.continuous = true;
         this.recognition.interimResults = true;
@@ -157,16 +202,41 @@ const SpeechManager = {
         return extracted === targetWord.toLowerCase();
     },
 
-    // Pronounce a word using SpeechSynthesis
+    // Pronounce a word using the best available Web Speech API voice
     sayWord(word) {
         if (!window.speechSynthesis) return;
-        // Cancel any ongoing speech
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(word);
-        utterance.rate = 0.8;
+        utterance.rate = 0.65;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
+        if (this.bestVoice) utterance.voice = this.bestVoice;
         window.speechSynthesis.speak(utterance);
+    },
+
+    // Pronounce a word using OpenAI TTS if an API key is set, otherwise fall back to sayWord()
+    async sayWordWithAI(word) {
+        const key = this.getApiKey();
+        if (key) {
+            try {
+                const res = await fetch('https://api.openai.com/v1/audio/speech', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ model: 'tts-1', input: word, voice: 'nova', speed: 0.75 })
+                });
+                if (!res.ok) throw new Error(`OpenAI TTS error: ${res.status}`);
+                const blob = await res.blob();
+                const audio = new Audio(URL.createObjectURL(blob));
+                audio.play();
+                return;
+            } catch (e) {
+                console.warn('OpenAI TTS failed, falling back to Web Speech API:', e);
+            }
+        }
+        this.sayWord(word);
     },
 
     // Say a phrase (for announcements)

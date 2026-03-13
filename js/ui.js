@@ -63,13 +63,20 @@ const UI = {
         if (!this.isTouch) {
             this.ctx.font = '14px monospace';
             this.ctx.fillStyle = '#888888';
-            this.ctx.fillText('Press C to add custom words', this.width / 2, 500);
+            this.ctx.fillText('Press C for custom words  |  V for AI voice', this.width / 2, 500);
         }
 
         // Custom words count
+        this.ctx.font = '14px monospace';
         if (WordManager.customWords.length > 0) {
             this.ctx.fillStyle = '#27ae60';
-            this.ctx.fillText(`${WordManager.customWords.length} custom word(s) loaded`, this.width / 2, 530);
+            this.ctx.fillText(`${WordManager.customWords.length} custom word(s) loaded`, this.width / 2, 525);
+        }
+
+        // AI voice status
+        if (SpeechManager.getApiKey()) {
+            this.ctx.fillStyle = '#3498db';
+            this.ctx.fillText('AI voice: ON', this.width / 2, 548);
         }
     },
 
